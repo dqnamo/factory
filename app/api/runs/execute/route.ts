@@ -1,5 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk/v3";
+import { type NextRequest, NextResponse } from "next/server";
+import { errorResponse, requireFactoryMember, requireRunInFactory } from "@/app/lib/server-auth";
 import type { executeFactoryRunTask } from "@/trigger/execute-factory-run";
 
 export async function POST(request: NextRequest) {
@@ -18,21 +19,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const handle = await tasks.trigger<typeof executeFactoryRunTask>(
-      "execute-factory-run",
-      { runId, factoryId, prompt },
-    );
+    await requireFactoryMember(request, factoryId);
+    await requireRunInFactory(factoryId, runId);
+
+    const handle = await tasks.trigger<typeof executeFactoryRunTask>("execute-factory-run", {
+      runId,
+      factoryId,
+      prompt,
+    });
 
     return NextResponse.json({ ok: true, triggerId: handle.id });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to trigger run execution",
-      },
-      { status: 500 },
-    );
+    return errorResponse(error, "Failed to trigger run execution");
   }
 }

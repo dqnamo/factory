@@ -6,6 +6,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Switch from "@/app/components/Switch";
+import { authFetch } from "@/app/lib/auth-fetch";
 import { db } from "@/app/lib/instant";
 
 type SkillItem = {
@@ -75,7 +76,7 @@ export default function FactorySkillsPage() {
     setIsInstalling(true);
 
     try {
-      const response = await fetch(`/api/factories/${factoryId}/skills/install`, {
+      const response = await authFetch(`/api/factories/${factoryId}/skills/install`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repoUrl: trimmedRepoUrl }),
@@ -111,7 +112,7 @@ export default function FactorySkillsPage() {
     setSkillNotice(null);
 
     try {
-      const response = await fetch(`/api/factories/${factoryId}/skills/${skillId}`, {
+      const response = await authFetch(`/api/factories/${factoryId}/skills/${skillId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled }),
@@ -136,7 +137,7 @@ export default function FactorySkillsPage() {
     setSkillNotice(null);
 
     try {
-      const response = await fetch(`/api/factories/${factoryId}/skills/${skillId}`, {
+      const response = await authFetch(`/api/factories/${factoryId}/skills/${skillId}`, {
         method: "DELETE",
       });
       const body = (await response.json().catch(() => null)) as { error?: string } | null;

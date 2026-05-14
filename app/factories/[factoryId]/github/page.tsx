@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
+import { authFetch } from "@/app/lib/auth-fetch";
 import { db } from "@/app/lib/instant";
 
 export default function GithubPage() {
@@ -25,7 +26,7 @@ export default function GithubPage() {
   );
 
   const factory = data?.factories[0];
-  const hasSavedToken = Boolean(factory?.githubToken);
+  const hasSavedToken = Boolean(factory?.githubTokenSet);
 
   useEffect(() => {
     if (factory?.githubRepoUrl) {
@@ -60,7 +61,17 @@ export default function GithubPage() {
         update.githubToken = trimmedToken;
       }
 
-      await db.transact(db.tx.factories[params.factoryId].update(update));
+      const response = await authFetch(`/api/factories/${params.factoryId}/github`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(update),
+      });
+
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Could not save GitHub settings.");
+      }
+
       setToken("");
       setSaved(true);
     } catch (saveError) {

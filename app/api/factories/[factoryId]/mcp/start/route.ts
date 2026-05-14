@@ -1,13 +1,6 @@
-import {
-  syncMcpConnection,
-  validateMcpServerUrl,
-  getErrorMessage,
-} from "@/app/lib/mcp/client";
-import {
-  createMcpConnection,
-  type McpAuthType,
-  upsertMcpBearerToken,
-} from "@/app/lib/mcp/records";
+import { getErrorMessage, syncMcpConnection, validateMcpServerUrl } from "@/app/lib/mcp/client";
+import { createMcpConnection, type McpAuthType, upsertMcpBearerToken } from "@/app/lib/mcp/records";
+import { errorResponse, requireFactoryMember } from "@/app/lib/server-auth";
 
 export const runtime = "nodejs";
 
@@ -28,6 +21,12 @@ export async function POST(request: Request, context: RouteContext) {
   let body: StartMcpRequest;
 
   try {
+    await requireFactoryMember(request, factoryId);
+  } catch (error) {
+    return errorResponse(error, "MCP setup could not be started.");
+  }
+
+  try {
     body = (await request.json()) as StartMcpRequest;
   } catch {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
@@ -36,15 +35,11 @@ export async function POST(request: Request, context: RouteContext) {
   const name = body.name?.trim();
   const scopes = body.scopes?.trim();
   const url = body.url?.trim();
-  const authType: McpAuthType =
-    body.authType === "bearer_token" ? "bearer_token" : "oauth";
+  const authType: McpAuthType = body.authType === "bearer_token" ? "bearer_token" : "oauth";
   const bearerToken = body.bearerToken?.trim();
 
   if (!name || !url) {
-    return Response.json(
-      { error: "name and url are required" },
-      { status: 400 },
-    );
+    return Response.json({ error: "name and url are required" }, { status: 400 });
   }
 
   if (authType === "bearer_token" && !bearerToken) {
@@ -81,24 +76,18 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     return Response.json({
-      authUrl:
-        result.status === "authorization_required" ? result.authUrl : null,
+      authUrl: result.status === "authorization_required" ? result.authUrl : null,
       id: mcpServerId,
       status: result.status,
     });
   } catch (error) {
     console.error(error);
 
-    return Response.json(
-      { error: getErrorMessage(error) },
-      { status: 500 },
-    );
+    return errorResponse(error, getErrorMessage(error));
   }
 }
 
 function getMcpCallbackUrl(factoryId: string, request: Request) {
-  const origin =
-    process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ??
-    new URL(request.url).origin;
+  const origin = process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ?? new URL(request.url).origin;
   return `${origin}/api/factories/${factoryId}/mcp/oauth/callback`;
 }

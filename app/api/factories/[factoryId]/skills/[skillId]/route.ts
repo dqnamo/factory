@@ -5,6 +5,7 @@ import {
   type SkillRecord,
   withFactorySnapshotBox,
 } from "@/app/lib/factory-skills";
+import { errorResponse, requireFactoryMember } from "@/app/lib/server-auth";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,12 @@ type UpdateSkillRequest = {
 export async function PATCH(request: Request, context: RouteContext) {
   const { factoryId, skillId } = await context.params;
   let body: UpdateSkillRequest;
+
+  try {
+    await requireFactoryMember(request, factoryId);
+  } catch (error) {
+    return errorResponse(error, "Skill could not be updated.");
+  }
 
   try {
     body = (await request.json()) as UpdateSkillRequest;
@@ -86,19 +93,15 @@ export async function PATCH(request: Request, context: RouteContext) {
   } catch (error) {
     console.error(error);
 
-    return Response.json(
-      {
-        error: error instanceof Error ? error.message : "Skill could not be updated.",
-      },
-      { status: 500 },
-    );
+    return errorResponse(error, "Skill could not be updated.");
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   const { factoryId, skillId } = await context.params;
 
   try {
+    await requireFactoryMember(request, factoryId);
     const { factory, skill } = await getFactorySkill(factoryId, skillId);
 
     if (!factory || !skill) {
@@ -127,12 +130,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   } catch (error) {
     console.error(error);
 
-    return Response.json(
-      {
-        error: error instanceof Error ? error.message : "Skill could not be deleted.",
-      },
-      { status: 500 },
-    );
+    return errorResponse(error, "Skill could not be deleted.");
   }
 }
 

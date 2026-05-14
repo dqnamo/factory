@@ -1,19 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  createBoxForCursorFactory,
-  validateCursorApiKey,
-} from "@/app/lib/box-cursor";
+import { createBoxForCursorFactory, validateCursorApiKey } from "@/app/lib/box-cursor";
+import { errorResponse, requireInstantUser } from "@/app/lib/server-auth";
 
 export async function POST(request: NextRequest) {
   try {
+    await requireInstantUser(request);
     const body = await request.json();
     const { cursorApiKey } = body as { cursorApiKey?: string };
 
     if (!cursorApiKey) {
-      return NextResponse.json(
-        { error: "cursorApiKey is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "cursorApiKey is required" }, { status: 400 });
     }
 
     const valid = await validateCursorApiKey(cursorApiKey);
@@ -31,14 +27,6 @@ export async function POST(request: NextRequest) {
       boxId,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to set up Cursor connection",
-      },
-      { status: 500 },
-    );
+    return errorResponse(error, "Failed to set up Cursor connection");
   }
 }

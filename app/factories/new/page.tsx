@@ -1,12 +1,12 @@
 "use client";
 
-import { id } from "@instantdb/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import ModalDrawer from "../../components/ModalDrawer";
+import { authFetch } from "../../lib/auth-fetch";
 import { db } from "../../lib/instant";
 
 type CodexStatus = "idle" | "starting" | "pending" | "authenticated" | "failed";
@@ -24,6 +24,7 @@ export default function NewFactoryPage() {
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [githubToken, setGithubToken] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [selectedEngine, setSelectedEngine] = useState<Engine | null>(null);
 
   const [codexModalOpen, setCodexModalOpen] = useState(false);
@@ -51,7 +52,7 @@ export default function NewFactoryPage() {
     const controller = new AbortController();
 
     const pollStatus = async () => {
-      const response = await fetch(`/api/codex-connect?boxId=${encodeURIComponent(boxId)}`, {
+      const response = await authFetch(`/api/codex-connect?boxId=${encodeURIComponent(boxId)}`, {
         signal: controller.signal,
       });
       const data = await response.json();
@@ -100,7 +101,7 @@ export default function NewFactoryPage() {
     setCodexCode(null);
 
     try {
-      const response = await fetch("/api/codex-connect", {
+      const response = await authFetch("/api/codex-connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boxId }),
@@ -144,7 +145,7 @@ export default function NewFactoryPage() {
     setCursorError(null);
 
     try {
-      const response = await fetch("/api/cursor-connect", {
+      const response = await authFetch("/api/cursor-connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cursorApiKey: cursorApiKey.trim() }),
@@ -183,40 +184,35 @@ export default function NewFactoryPage() {
       return;
     }
 
+    setCreateError(null);
     setCreating(true);
-    const factoryId = id();
-    const factoryUserId = id();
 
-    const factoryFields: Record<string, unknown> = {
-      name: factoryName,
-      createdAt: Date.now(),
-      sandboxId: activeBoxId,
-      engine: selectedEngine,
-      githubRepoUrl: githubRepoUrl.trim(),
-      githubToken: githubToken.trim(),
-    };
+    try {
+      const response = await authFetch("/api/factories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cursorApiKey: selectedEngine === "cursor" ? cursorApiKey.trim() : undefined,
+          engine: selectedEngine,
+          factoryName,
+          githubRepoUrl: githubRepoUrl.trim(),
+          githubToken: githubToken.trim(),
+          sandboxId: activeBoxId,
+        }),
+      });
 
-    if (selectedEngine === "cursor") {
-      factoryFields.cursorApiKey = cursorApiKey.trim();
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Factory could not be created.");
+      }
+
+      const body = (await response.json()) as { factoryId: string };
+
+      router.replace(`/factories/${body.factoryId}`);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Factory could not be created.");
+      setCreating(false);
     }
-
-    await db.transact([
-      db.tx.factories[factoryId].update(factoryFields),
-      db.tx.factoryUsers[factoryUserId]
-        .update({
-          role: "owner",
-          createdAt: Date.now(),
-        })
-        .link({ factory: factoryId, user: user.id }),
-    ]);
-
-    fetch("/api/factories/setup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ factoryId }),
-    }).catch(() => {});
-
-    router.replace(`/factories/${factoryId}`);
   }, [
     user,
     activeBoxId,
@@ -483,6 +479,8 @@ export default function NewFactoryPage() {
               <p className="mt-2 text-xs font-medium text-grayscale-12">Claude</p>
             </div>
           </div>
+
+          {createError ? <p className="px-3 pb-2 text-xs text-red-500">{createError}</p> : null}
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 sm:justify-between border-t border-grayscale-3">
             <p className="text-[10px] text-grayscale-10 px-1">

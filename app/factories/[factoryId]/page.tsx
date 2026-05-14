@@ -1,12 +1,13 @@
 "use client";
 
-import Button from "@/app/components/Button";
-import Input from "@/app/components/Input";
-import { db } from "@/app/lib/instant";
 import { id } from "@instantdb/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import Button from "@/app/components/Button";
+import Input from "@/app/components/Input";
+import { authFetch } from "@/app/lib/auth-fetch";
+import { db } from "@/app/lib/instant";
 
 export default function FactoryPage() {
   const params = useParams<{ factoryId: string }>();
@@ -41,7 +42,7 @@ export default function FactoryPage() {
         .link({ run: runId }),
     ]);
 
-    fetch("/api/runs/execute", {
+    authFetch("/api/runs/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -74,9 +75,7 @@ export default function FactoryPage() {
             transition={{ duration: 0.25 }}
             className="flex flex-col items-center mb-6"
           >
-            <p className="text font-medium text-grayscale-11">
-              Lets Build Something Great!
-            </p>
+            <p className="text font-medium text-grayscale-11">Lets Build Something Great!</p>
             <p className="text-sm text-grayscale-10">
               We&apos;ll help you build your idea into a reality.
             </p>

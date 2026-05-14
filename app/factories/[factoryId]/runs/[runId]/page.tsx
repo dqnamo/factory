@@ -1,20 +1,25 @@
 "use client";
 
-import Button from "@/app/components/Button";
-import { db } from "@/app/lib/instant";
 import { id } from "@instantdb/react";
 import { CircleNotchIcon } from "@phosphor-icons/react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
-
+import Button from "@/app/components/Button";
 import RunStatusGrid from "@/app/components/RunStatusGrid";
+import { authFetch } from "@/app/lib/auth-fetch";
+import { db } from "@/app/lib/instant";
+
+type QueuedMessage = {
+  id: string;
+  text: string;
+};
 
 export default function RunPage() {
   const params = useParams<{ factoryId: string; runId: string }>();
   const [followUp, setFollowUp] = useState("");
   const [sending, setSending] = useState(false);
-  const [queue, setQueue] = useState<string[]>([]);
+  const [queue, setQueue] = useState<QueuedMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data } = db.useQuery({
@@ -53,7 +58,7 @@ export default function RunPage() {
           .link({ run: params.runId }),
       ]);
 
-      fetch("/api/runs/execute", {
+      authFetch("/api/runs/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -79,7 +84,7 @@ export default function RunPage() {
 
   const handleQueueMessage = useCallback(() => {
     if (!followUp.trim()) return;
-    setQueue((prev) => [...prev, followUp.trim()]);
+    setQueue((prev) => [...prev, { id: id(), text: followUp.trim() }]);
     setFollowUp("");
   }, [followUp]);
 
@@ -99,7 +104,7 @@ export default function RunPage() {
     // Defer the state update to avoid synchronous setState in effect
     queueMicrotask(() => {
       setQueue((prev) => prev.slice(1));
-      sendMessage(next).finally(() => {
+      sendMessage(next.text).finally(() => {
         draining.current = false;
       });
     });
@@ -124,7 +129,9 @@ export default function RunPage() {
     <div className="h-full w-full relative flex flex-col">
       <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b border-grayscale-3">
         <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm font-medium text-grayscale-12 truncate">{run.name || "Untitled run"}</p>
+          <p className="text-sm font-medium text-grayscale-12 truncate">
+            {run.name || "Untitled run"}
+          </p>
           <RunStatusGrid status={run.status ?? "unknown"} />
         </div>
         <Button
@@ -261,12 +268,12 @@ export default function RunPage() {
             </div>
           )}
 
-          {queue.map((text, i) => (
-            <div key={`queued-${i}`} className="flex flex-col gap-0.5 self-end max-w-md opacity-50">
+          {queue.map((message) => (
+            <div key={message.id} className="flex flex-col gap-0.5 self-end max-w-md opacity-50">
               <p className="text-[10px] font-mono font-semibold text-grayscale-10 uppercase text-right">
                 Queued
               </p>
-              <p className="text-sm text-grayscale-11 text-right">{text}</p>
+              <p className="text-sm text-grayscale-11 text-right">{message.text}</p>
             </div>
           ))}
         </div>

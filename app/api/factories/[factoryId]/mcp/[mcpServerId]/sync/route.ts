@@ -1,8 +1,6 @@
-import {
-  syncMcpConnection,
-  getErrorMessage,
-} from "@/app/lib/mcp/client";
-import { upsertMcpBearerToken } from "@/app/lib/mcp/records";
+import { getErrorMessage, syncMcpConnection } from "@/app/lib/mcp/client";
+import { getMcpConnectionById, upsertMcpBearerToken } from "@/app/lib/mcp/records";
+import { errorResponse, requireFactoryMember } from "@/app/lib/server-auth";
 
 export const runtime = "nodejs";
 
@@ -14,6 +12,18 @@ export async function POST(request: Request, context: RouteContext) {
   const { factoryId, mcpServerId } = await context.params;
 
   let bearerToken: string | undefined;
+
+  try {
+    await requireFactoryMember(request, factoryId);
+  } catch (error) {
+    return errorResponse(error, "MCP sync failed.");
+  }
+
+  const connection = await getMcpConnectionById(mcpServerId);
+
+  if (!connection || connection.factory?.id !== factoryId) {
+    return Response.json({ error: "MCP connection was not found." }, { status: 404 });
+  }
 
   try {
     const body = (await request.json().catch(() => null)) as {
@@ -29,9 +39,7 @@ export async function POST(request: Request, context: RouteContext) {
       await upsertMcpBearerToken(mcpServerId, bearerToken);
     }
 
-    const origin =
-      process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ??
-      new URL(request.url).origin;
+    const origin = process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ?? new URL(request.url).origin;
     const callbackUrl = `${origin}/api/factories/${factoryId}/mcp/oauth/callback`;
 
     const result = await syncMcpConnection({
@@ -41,16 +49,12 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     return Response.json({
-      authUrl:
-        result.status === "authorization_required" ? result.authUrl : null,
+      authUrl: result.status === "authorization_required" ? result.authUrl : null,
       status: result.status,
     });
   } catch (error) {
     console.error(error);
 
-    return Response.json(
-      { error: getErrorMessage(error) },
-      { status: 500 },
-    );
+    return errorResponse(error, getErrorMessage(error));
   }
 }

@@ -6,6 +6,7 @@ import {
   type SkillCandidate,
   withFactorySnapshotBox,
 } from "@/app/lib/factory-skills";
+import { errorResponse, requireFactoryMember } from "@/app/lib/server-auth";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,12 @@ type FactoryRecord = {
 export async function POST(request: Request, context: RouteContext) {
   const { factoryId } = await context.params;
   let body: InstallSkillsRequest;
+
+  try {
+    await requireFactoryMember(request, factoryId);
+  } catch (error) {
+    return errorResponse(error, "Skills could not be installed.");
+  }
 
   try {
     body = (await request.json()) as InstallSkillsRequest;
@@ -120,12 +127,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     console.error(error);
 
-    return Response.json(
-      {
-        error: error instanceof Error ? error.message : "Skills could not be installed.",
-      },
-      { status: 500 },
-    );
+    return errorResponse(error, "Skills could not be installed.");
   }
 }
 

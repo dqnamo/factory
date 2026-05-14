@@ -7,6 +7,7 @@ import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Switch from "@/app/components/Switch";
 import { cn } from "@/app/helpers/ui-helper";
+import { authFetch } from "@/app/lib/auth-fetch";
 import { db } from "@/app/lib/instant";
 
 type McpAuthType = "bearer_token" | "oauth";
@@ -133,7 +134,7 @@ export default function FactoryMcpPage() {
     setIsSavingMcp(true);
 
     try {
-      const response = await fetch(`/api/factories/${factoryId}/mcp/start`, {
+      const response = await authFetch(`/api/factories/${factoryId}/mcp/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -173,7 +174,7 @@ export default function FactoryMcpPage() {
     setMcpAuthUrl(null);
 
     try {
-      const response = await fetch(`/api/factories/${factoryId}/mcp/${serverId}/sync`, {
+      const response = await authFetch(`/api/factories/${factoryId}/mcp/${serverId}/sync`, {
         method: "POST",
       });
       const body = await response.json().catch(() => null);
