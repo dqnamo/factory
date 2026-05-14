@@ -48,8 +48,11 @@ export default function RunPage() {
       const eventId = id();
 
       await db.transact([
-        db.tx.runs[params.runId].update({ status: "running" }),
+        db.tx.runs[params.runId]
+          .ruleParams({ factoryId: params.factoryId })
+          .update({ status: "running" }),
         db.tx.events[eventId]
+          .ruleParams({ factoryId: params.factoryId })
           .update({
             type: "message",
             data: { text },
@@ -112,8 +115,12 @@ export default function RunPage() {
 
   const handleToggleCompleted = useCallback(async () => {
     const newStatus = run?.status === "completed" ? "idle" : "completed";
-    await db.transact(db.tx.runs[params.runId].update({ status: newStatus }));
-  }, [params.runId, run?.status]);
+    await db.transact(
+      db.tx.runs[params.runId]
+        .ruleParams({ factoryId: params.factoryId })
+        .update({ status: newStatus }),
+    );
+  }, [params.factoryId, params.runId, run?.status]);
 
   if (!run) {
     return (

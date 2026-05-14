@@ -66,7 +66,8 @@ const rules = {
       },
     },
     bind: {
-      isFactoryMember: "auth.id != null && auth.id in data.ref('factory.factoryUsers.user.id')",
+      isFactoryMember:
+        "auth.id != null && (auth.id in data.ref('factory.factoryUsers.user.id') || (ruleParams.factoryId in data.ref('factory.id') && ruleParams.factoryId in auth.ref('$user.factoryUsers.factory.id')))",
     },
   },
   events: {
@@ -81,7 +82,8 @@ const rules = {
       },
     },
     bind: {
-      isFactoryMember: "auth.id != null && auth.id in data.ref('run.factory.factoryUsers.user.id')",
+      isFactoryMember:
+        "auth.id != null && (auth.id in data.ref('run.factory.factoryUsers.user.id') || (ruleParams.factoryId in data.ref('run.factory.id') && ruleParams.factoryId in auth.ref('$user.factoryUsers.factory.id')))",
     },
   },
   skills: {

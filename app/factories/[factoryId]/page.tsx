@@ -20,27 +20,37 @@ export default function FactoryPage() {
   const handleCreateRun = useCallback(async () => {
     if (!runName.trim() || !prompt.trim() || submitting) return;
 
-    setSubmitting(true);
-
     const runId = id();
     const eventId = id();
+    const text = prompt.trim();
+    const runPath = `/factories/${params.factoryId}/runs/${runId}`;
 
-    await db.transact([
+    setSubmitting(true);
+
+    await db.transact(
       db.tx.runs[runId]
+        .ruleParams({ factoryId: params.factoryId })
         .update({
           name: runName.trim(),
           status: "provisioning",
           createdAt: Date.now(),
         })
         .link({ factory: params.factoryId }),
+    );
+
+    await db.transact(
       db.tx.events[eventId]
+        .ruleParams({ factoryId: params.factoryId })
         .update({
           type: "message",
-          data: { text: prompt.trim() },
+          data: { text },
           createdAt: Date.now(),
         })
         .link({ run: runId }),
-    ]);
+    );
+
+    pendingNavRef.current = runPath;
+    router.push(runPath);
 
     authFetch("/api/runs/execute", {
       method: "POST",
@@ -48,12 +58,10 @@ export default function FactoryPage() {
       body: JSON.stringify({
         runId,
         factoryId: params.factoryId,
-        prompt: prompt.trim(),
+        prompt: text,
       }),
     }).catch(() => {});
-
-    pendingNavRef.current = `/factories/${params.factoryId}/runs/${runId}`;
-  }, [runName, prompt, submitting, params.factoryId]);
+  }, [runName, prompt, submitting, params.factoryId, router]);
 
   return (
     <div
