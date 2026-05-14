@@ -8,11 +8,12 @@ import {
   XIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { db } from "../../lib/instant";
 import { cn } from "../../helpers/ui-helper";
 import Button from "@/app/components/Button";
 import RunStatusGrid from "@/app/components/RunStatusGrid";
+import ContextMenu, { type ContextMenuItem } from "@/app/components/ContextMenu";
 import { DateTime } from "luxon";
 import {
   DetectiveIcon,
@@ -236,6 +237,78 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
   );
 }
 
+function useRunContextMenu(
+  run: { id: string; status?: string },
+  factoryId: string,
+): ContextMenuItem[] {
+  const router = useRouter();
+  const isClosed = CLOSED_STATUSES.includes(run.status ?? "");
+
+  return [
+    {
+      type: "item",
+      label: isClosed ? "Mark as incomplete" : "Mark as complete",
+      onClick: () => {
+        db.transact(
+          db.tx.runs[run.id].update({
+            status: isClosed ? "idle" : "completed",
+          }),
+        );
+      },
+    },
+    { type: "separator" },
+    {
+      type: "item",
+      label: "Delete run",
+      variant: "danger",
+      onClick: () => {
+        db.transact(db.tx.runs[run.id].delete());
+        router.push(`/factories/${factoryId}`);
+      },
+    },
+  ];
+}
+
+function RunItem({
+  run,
+  factoryId,
+  isActive,
+  onNavigate,
+}: {
+  run: { id: string; name?: string; status?: string; createdAt?: number };
+  factoryId: string;
+  isActive: boolean;
+  onNavigate?: () => void;
+}) {
+  const menuItems = useRunContextMenu(run, factoryId);
+
+  return (
+    <ContextMenu items={menuItems} className="rounded-md">
+      <Link
+        href={`/factories/${factoryId}/runs/${run.id}`}
+        onClick={onNavigate}
+        className={`flex flex-col px-2 py-1 rounded-md transition-colors ${
+          isActive ? "bg-grayscale-3" : "hover:bg-grayscale-2"
+        }`}
+      >
+        <div className="flex items-center gap-1.5">
+          <p
+            className={`text-sm truncate flex-1 ${
+              isActive ? "text-grayscale-12" : "text-grayscale-11"
+            }`}
+          >
+            {run.name || "Untitled run"}
+          </p>
+          <RunStatusGrid status={run.status ?? ""} />
+        </div>
+        {run.createdAt && (
+          <p className="text-xs text-grayscale-10">{formatTime(run.createdAt)}</p>
+        )}
+      </Link>
+    </ContextMenu>
+  );
+}
+
 function RunListContent({
   factoryId,
   runId,
@@ -274,33 +347,15 @@ function RunListContent({
 
       {activeRuns.length > 0 && (
         <div className="flex flex-col mt-2 gap-1">
-          {activeRuns.map((run) => {
-            const isActive = runId === run.id;
-            return (
-              <Link
-                key={run.id}
-                href={`/factories/${factoryId}/runs/${run.id}`}
-                onClick={onNavigate}
-                className={`flex flex-col px-2 py-1 rounded-md transition-colors ${
-                  isActive ? "bg-grayscale-3" : "hover:bg-grayscale-2"
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <p
-                    className={`text-sm truncate flex-1 ${
-                      isActive ? "text-grayscale-12" : "text-grayscale-11"
-                    }`}
-                  >
-                    {run.name || "Untitled run"}
-                  </p>
-                  <RunStatusGrid status={run.status ?? ""} />
-                </div>
-                {run.createdAt && (
-                  <p className="text-xs text-grayscale-10">{formatTime(run.createdAt)}</p>
-                )}
-              </Link>
-            );
-          })}
+          {activeRuns.map((run) => (
+            <RunItem
+              key={run.id}
+              run={run}
+              factoryId={factoryId}
+              isActive={runId === run.id}
+              onNavigate={onNavigate}
+            />
+          ))}
         </div>
       )}
 
@@ -310,33 +365,15 @@ function RunListContent({
             Completed Runs
           </p>
           <div className="flex flex-col mt-2 gap-1">
-            {closedRuns.map((run) => {
-              const isActive = runId === run.id;
-              return (
-                <Link
-                  key={run.id}
-                  href={`/factories/${factoryId}/runs/${run.id}`}
-                  onClick={onNavigate}
-                  className={`flex flex-col px-2 py-1 rounded-md transition-colors ${
-                    isActive ? "bg-grayscale-3" : "hover:bg-grayscale-2"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <p
-                      className={`text-sm truncate flex-1 ${
-                        isActive ? "text-grayscale-12" : "text-grayscale-11"
-                      }`}
-                    >
-                      {run.name || "Untitled run"}
-                    </p>
-                    <RunStatusGrid status={run.status ?? ""} />
-                  </div>
-                  {run.createdAt && (
-                    <p className="text-xs text-grayscale-10">{formatTime(run.createdAt)}</p>
-                  )}
-                </Link>
-              );
-            })}
+            {closedRuns.map((run) => (
+              <RunItem
+                key={run.id}
+                run={run}
+                factoryId={factoryId}
+                isActive={runId === run.id}
+                onNavigate={onNavigate}
+              />
+            ))}
           </div>
         </>
       )}
