@@ -38,6 +38,15 @@ export const executeFactoryRunTask = task({
     const boxEnv: Record<string, string> = {};
     if (factory.githubToken) {
       boxEnv.GITHUB_TOKEN = factory.githubToken;
+      boxEnv.GH_TOKEN = factory.githubToken;
+    }
+    if (factory.gitName) {
+      boxEnv.GIT_AUTHOR_NAME = factory.gitName;
+      boxEnv.GIT_COMMITTER_NAME = factory.gitName;
+    }
+    if (factory.gitEmail) {
+      boxEnv.GIT_AUTHOR_EMAIL = factory.gitEmail;
+      boxEnv.GIT_COMMITTER_EMAIL = factory.gitEmail;
     }
 
     try {
@@ -50,7 +59,10 @@ export const executeFactoryRunTask = task({
 
         if (factory.githubToken) {
           logger.log("Configuring git credentials in box", { boxId });
-          await configureGitInBox(boxId, factory.githubToken);
+          await configureGitInBox(boxId, factory.githubToken, {
+            name: factory.gitName,
+            email: factory.gitEmail,
+          });
         }
 
         if (factory.githubRepoUrl) {
@@ -65,6 +77,11 @@ export const executeFactoryRunTask = task({
           await syncGithubRepo(boxId, {
             repoUrl: factory.githubRepoUrl,
             githubToken: factory.githubToken,
+          });
+
+          await configureGitInBox(boxId, factory.githubToken, {
+            name: factory.gitName,
+            email: factory.gitEmail,
           });
         }
 
@@ -84,7 +101,10 @@ export const executeFactoryRunTask = task({
 
         if (factory.githubToken) {
           logger.log("Refreshing git credentials in box", { boxId });
-          await configureGitInBox(boxId, factory.githubToken);
+          await configureGitInBox(boxId, factory.githubToken, {
+            name: factory.gitName,
+            email: factory.gitEmail,
+          });
         }
 
         await db.transact(db.tx.runs[payload.runId].update({ status: "running" }));

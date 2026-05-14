@@ -8,6 +8,8 @@ type RouteContext = {
 };
 
 type UpdateGithubRequest = {
+  gitEmail?: string;
+  gitName?: string;
   githubRepoUrl?: string;
   githubToken?: string;
 };
@@ -19,6 +21,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     await requireFactoryMember(request, factoryId);
 
     const body = (await request.json()) as UpdateGithubRequest;
+    const gitEmail = body.gitEmail?.trim();
+    const gitName = body.gitName?.trim();
     const githubRepoUrl = body.githubRepoUrl?.trim();
     const githubToken = body.githubToken?.trim();
 
@@ -26,9 +30,27 @@ export async function PATCH(request: Request, context: RouteContext) {
       return Response.json({ error: "githubRepoUrl is required." }, { status: 400 });
     }
 
-    const update: { githubRepoUrl: string; githubToken?: string; githubTokenSet?: boolean } = {
+    if (gitEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gitEmail)) {
+      return Response.json({ error: "gitEmail must be a valid email address." }, { status: 400 });
+    }
+
+    const update: {
+      gitEmail?: string;
+      gitName?: string;
+      githubRepoUrl: string;
+      githubToken?: string;
+      githubTokenSet?: boolean;
+    } = {
       githubRepoUrl,
     };
+
+    if (body.gitEmail !== undefined) {
+      update.gitEmail = gitEmail ?? "";
+    }
+
+    if (body.gitName !== undefined) {
+      update.gitName = gitName ?? "";
+    }
 
     if (githubToken) {
       update.githubToken = githubToken;

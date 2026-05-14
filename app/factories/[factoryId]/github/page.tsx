@@ -11,6 +11,8 @@ export default function GithubPage() {
   const params = useParams<{ factoryId: string }>();
   const [repoUrl, setRepoUrl] = useState("");
   const [token, setToken] = useState("");
+  const [gitName, setGitName] = useState("");
+  const [gitEmail, setGitEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +36,19 @@ export default function GithubPage() {
     }
   }, [factory?.githubRepoUrl]);
 
+  useEffect(() => {
+    setGitName(factory?.gitName ?? "");
+  }, [factory?.gitName]);
+
+  useEffect(() => {
+    setGitEmail(factory?.gitEmail ?? "");
+  }, [factory?.gitEmail]);
+
   const handleSave = useCallback(async () => {
     const trimmedRepoUrl = repoUrl.trim();
     const trimmedToken = token.trim();
+    const trimmedGitName = gitName.trim();
+    const trimmedGitEmail = gitEmail.trim();
 
     if (!trimmedRepoUrl) {
       setError("Enter a repository URL.");
@@ -53,7 +65,14 @@ export default function GithubPage() {
     setError(null);
 
     try {
-      const update: { githubRepoUrl: string; githubToken?: string } = {
+      const update: {
+        gitEmail: string;
+        gitName: string;
+        githubRepoUrl: string;
+        githubToken?: string;
+      } = {
+        gitEmail: trimmedGitEmail,
+        gitName: trimmedGitName,
         githubRepoUrl: trimmedRepoUrl,
       };
 
@@ -79,7 +98,7 @@ export default function GithubPage() {
     } finally {
       setSaving(false);
     }
-  }, [repoUrl, token, hasSavedToken, params.factoryId]);
+  }, [repoUrl, token, gitName, gitEmail, hasSavedToken, params.factoryId]);
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 py-5 sm:px-0 sm:py-8 flex flex-col gap-4 overflow-y-auto flex-1">
@@ -131,6 +150,43 @@ export default function GithubPage() {
             value={token}
             onChange={(event) => {
               setToken(event.target.value);
+              setSaved(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleSave();
+              }
+            }}
+          />
+
+          <div className="flex flex-col p-3">
+            <h2 className="font-medium text-sm text-grayscale-11">Commit identity</h2>
+            <p className="text-xs text-grayscale-11">
+              Optional. When blank, the runner uses the GitHub token owner when it can.
+            </p>
+          </div>
+          <Input
+            autoComplete="name"
+            disabled={isLoading || saving}
+            name="git-name"
+            placeholder="Commit author name"
+            value={gitName}
+            onChange={(event) => {
+              setGitName(event.target.value);
+              setSaved(false);
+            }}
+          />
+          <Input
+            autoComplete="email"
+            disabled={isLoading || saving}
+            inputMode="email"
+            name="git-email"
+            placeholder="author@example.com"
+            type="email"
+            value={gitEmail}
+            onChange={(event) => {
+              setGitEmail(event.target.value);
               setSaved(false);
             }}
             onKeyDown={(event) => {
