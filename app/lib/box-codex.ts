@@ -332,6 +332,7 @@ export async function syncGithubRepo(
         `branch="$(git -C ${shellQuote(factoryRepoDir)} symbolic-ref --quiet --short refs/remotes/origin/HEAD | sed 's#^origin/##')"; if test -z "$branch"; then branch="$(git -C ${shellQuote(factoryRepoDir)} rev-parse --abbrev-ref HEAD)"; fi; git -C ${shellQuote(factoryRepoDir)} checkout --quiet "$branch"; git -C ${shellQuote(factoryRepoDir)} ${gitAuthArgs} pull --ff-only --quiet origin "$branch"`,
       ].join(" && ") +
       `; else rm -rf ${shellQuote(factoryRepoDir)} && git ${gitAuthArgs} clone --quiet ${shellQuote(repoUrl)} ${shellQuote(factoryRepoDir)} && git -C ${shellQuote(factoryRepoDir)} remote set-url origin ${shellQuote(repoUrl)}; fi`,
+    `test -d ${shellQuote(`${factoryRepoDir}/.git`)}`,
   ].join(" && ");
 
   const result = await runBoxCommand(boxId, {
@@ -366,6 +367,8 @@ export async function streamCodexExec(
 ) {
   const apiKey = getBoxApiKey();
   const box = await Box.get(boxId, { apiKey });
+  const cwd = opts.cwd ?? boxWorkspace;
+  await assertBoxDirectory(boxId, cwd, "Codex");
 
   const escapedPrompt = shellQuote(opts.prompt);
 
@@ -378,7 +381,6 @@ export async function streamCodexExec(
     .map(([k, v]) => `export ${k}=${shellQuote(v)}`)
     .join(" && ");
 
-  const cwd = opts.cwd ?? boxWorkspace;
   const fullCommand = [
     `cd ${shellQuote(cwd)}`,
     envExports || null,
@@ -389,9 +391,11 @@ export async function streamCodexExec(
 
   const stream = await box.exec.stream(fullCommand);
   let buffer = "";
+  let output = "";
 
   for await (const chunk of stream) {
     if (chunk.type === "output") {
+      output += chunk.data;
       buffer += chunk.data;
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
@@ -415,6 +419,32 @@ export async function streamCodexExec(
       // Not valid JSON, skip
     }
   }
+
+  if (stream.exitCode !== null && stream.exitCode !== 0) {
+    throw new Error(formatExecFailure("Codex", stream.exitCode, stream.result || output));
+  }
+}
+
+async function assertBoxDirectory(boxId: string, cwd: string, toolName: string) {
+  const result = await runBoxCommand(boxId, {
+    command: "pwd",
+    cwd,
+    timeout_ms: 5_000,
+  });
+
+  if (!result.success) {
+    throw new Error(
+      `${toolName} exec cwd is not available: ${cwd}. ${
+        cleanOutput(getOutput(result)) || "Directory does not exist or is inaccessible."
+      }`,
+    );
+  }
+}
+
+function formatExecFailure(toolName: string, exitCode: number, output: string) {
+  const clean = cleanOutput(output);
+  const suffix = clean ? `: ${clean.slice(0, 2_000)}` : ".";
+  return `${toolName} exec failed with exit code ${exitCode}${suffix}`;
 }
 
 function normalizeGithubRepoUrl(repoUrl: string) {

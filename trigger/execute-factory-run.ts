@@ -65,26 +65,6 @@ export const executeFactoryRunTask = task({
           });
         }
 
-        if (factory.githubRepoUrl) {
-          if (!factory.githubToken) {
-            throw new Error(`Factory ${payload.factoryId} has no GitHub token`);
-          }
-
-          logger.log("Pulling latest GitHub repository changes", {
-            boxId,
-            repoUrl: factory.githubRepoUrl,
-          });
-          await syncGithubRepo(boxId, {
-            repoUrl: factory.githubRepoUrl,
-            githubToken: factory.githubToken,
-          });
-
-          await configureGitInBox(boxId, factory.githubToken, {
-            name: factory.gitName,
-            email: factory.gitEmail,
-          });
-        }
-
         await db.transact(
           db.tx.runs[payload.runId].update({
             sandboxId: boxId,
@@ -108,6 +88,27 @@ export const executeFactoryRunTask = task({
         }
 
         await db.transact(db.tx.runs[payload.runId].update({ status: "running" }));
+      }
+
+      if (factory.githubRepoUrl) {
+        if (!factory.githubToken) {
+          throw new Error(`Factory ${payload.factoryId} has no GitHub token`);
+        }
+
+        logger.log("Syncing GitHub repository in run box", {
+          boxId,
+          repoUrl: factory.githubRepoUrl,
+          resume: isResume,
+        });
+        await syncGithubRepo(boxId, {
+          repoUrl: factory.githubRepoUrl,
+          githubToken: factory.githubToken,
+        });
+
+        await configureGitInBox(boxId, factory.githubToken, {
+          name: factory.gitName,
+          email: factory.gitEmail,
+        });
       }
 
       let eventCount = 0;

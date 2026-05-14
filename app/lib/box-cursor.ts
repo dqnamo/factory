@@ -67,22 +67,22 @@ export async function streamCursorExec(
 ) {
   const apiKey = getBoxApiKey();
   const box = await Box.get(boxId, { apiKey });
+  const cwd = opts.cwd ?? boxWorkspace;
+  await assertBoxDirectory(boxId, cwd, "Cursor");
 
   const escapedPrompt = shellQuote(opts.prompt);
 
   const cursorCommand = `CURSOR_API_KEY=${shellQuote(opts.cursorApiKey)} agent -p --force --output-format stream-json ${escapedPrompt}`;
 
-  const cwd = opts.cwd ?? boxWorkspace;
-  const fullCommand = [
-    `cd ${shellQuote(cwd)}`,
-    `sh -lc ${shellQuote(cursorCommand)}`,
-  ].join(" && ");
+  const fullCommand = [`cd ${shellQuote(cwd)}`, `sh -lc ${shellQuote(cursorCommand)}`].join(" && ");
 
   const stream = await box.exec.stream(fullCommand);
   let buffer = "";
+  let output = "";
 
   for await (const chunk of stream) {
     if (chunk.type === "output") {
+      output += chunk.data;
       buffer += chunk.data;
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
@@ -108,6 +108,32 @@ export async function streamCursorExec(
       // Not valid JSON, skip
     }
   }
+
+  if (stream.exitCode !== null && stream.exitCode !== 0) {
+    throw new Error(formatExecFailure("Cursor", stream.exitCode, stream.result || output));
+  }
+}
+
+async function assertBoxDirectory(boxId: string, cwd: string, toolName: string) {
+  const result = await runBoxCommand(boxId, {
+    command: "pwd",
+    cwd,
+    timeout_ms: 5_000,
+  });
+
+  if (!result.success) {
+    throw new Error(
+      `${toolName} exec cwd is not available: ${cwd}. ${
+        cleanOutput(getOutput(result)) || "Directory does not exist or is inaccessible."
+      }`,
+    );
+  }
+}
+
+function formatExecFailure(toolName: string, exitCode: number, output: string) {
+  const clean = cleanOutput(output);
+  const suffix = clean ? `: ${clean.slice(0, 2_000)}` : ".";
+  return `${toolName} exec failed with exit code ${exitCode}${suffix}`;
 }
 
 /**
