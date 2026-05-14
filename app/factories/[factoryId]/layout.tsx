@@ -425,7 +425,7 @@ const SECTION_ITEMS = [
     match: () => false,
   },
   {
-    href: (id: string) => `/factories/${id}`,
+    href: (id: string) => `/factories/${id}/settings`,
     icon: FadersHorizontalIcon,
     id: "settings",
     label: "Settings",

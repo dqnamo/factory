@@ -157,7 +157,7 @@ export default function RunPage() {
                     You
                   </p>
                   <div className="text-sm text-grayscale-12 text-right">
-                    <Streamdown>{text}</Streamdown>
+                    <Streamdown linkSafety={{ enabled: false }}>{text}</Streamdown>
                   </div>
                 </div>
               );
@@ -172,7 +172,7 @@ export default function RunPage() {
                       Agent
                     </p>
                     <div className="text-sm text-grayscale-12">
-                      <Streamdown>{item.text}</Streamdown>
+                      <Streamdown linkSafety={{ enabled: false }}>{item.text}</Streamdown>
                     </div>
                   </div>
                 );
