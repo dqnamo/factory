@@ -256,6 +256,51 @@ export async function restoreBoxFromSnapshot(
   return box.id;
 }
 
+export async function configureGitInBox(
+  boxId: string,
+  githubToken: string,
+) {
+  const { name, email } = await fetchGithubUser(githubToken);
+
+  const tokenUrl = `https://x-access-token:${githubToken}@github.com/`;
+  const command = [
+    "command -v git >/dev/null 2>&1 || { apt-get update && apt-get install -y git; }",
+    `git config --global url.${shellQuote(tokenUrl)}.insteadOf ${shellQuote("https://github.com/")}`,
+    `git config --global user.name ${shellQuote(name)}`,
+    `git config --global user.email ${shellQuote(email)}`,
+  ].join(" && ");
+
+  const result = await runBoxCommand(boxId, {
+    command,
+    cwd: boxWorkspace,
+    timeout_ms: 15_000,
+  });
+
+  if (!result.success) {
+    throw new Error(
+      `Could not configure git: ${cleanOutput(getOutput(result)) || "No output."}`,
+    );
+  }
+}
+
+async function fetchGithubUser(token: string): Promise<{ name: string; email: string }> {
+  try {
+    const res = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    });
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    const user = (await res.json()) as { name?: string; login?: string; email?: string; id?: number };
+    const name = user.name || user.login || "Factory";
+    const email = user.email || (user.id ? `${user.id}+${user.login}@users.noreply.github.com` : "factory@noreply.github.com");
+    return { name, email };
+  } catch {
+    return { name: "Factory", email: "factory@noreply.github.com" };
+  }
+}
+
 export async function syncGithubRepo(
   boxId: string,
   input: { repoUrl: string; githubToken: string },

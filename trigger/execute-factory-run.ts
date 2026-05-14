@@ -2,6 +2,7 @@ import { id } from "@instantdb/admin";
 import { logger, task } from "@trigger.dev/sdk/v3";
 import { db } from "../app/lib/admin-db";
 import {
+  configureGitInBox,
   factoryRepoDir,
   killRunningCodexExec,
   restoreBoxFromSnapshot,
@@ -47,6 +48,11 @@ export const executeFactoryRunTask = task({
         });
         boxId = await restoreBoxFromSnapshot(factory.snapshotId, { env: boxEnv });
 
+        if (factory.githubToken) {
+          logger.log("Configuring git credentials in box", { boxId });
+          await configureGitInBox(boxId, factory.githubToken);
+        }
+
         if (factory.githubRepoUrl) {
           if (!factory.githubToken) {
             throw new Error(`Factory ${payload.factoryId} has no GitHub token`);
@@ -74,6 +80,11 @@ export const executeFactoryRunTask = task({
           await killRunningCursorExec(boxId);
         } else {
           await killRunningCodexExec(boxId);
+        }
+
+        if (factory.githubToken) {
+          logger.log("Refreshing git credentials in box", { boxId });
+          await configureGitInBox(boxId, factory.githubToken);
         }
 
         await db.transact(db.tx.runs[payload.runId].update({ status: "running" }));
