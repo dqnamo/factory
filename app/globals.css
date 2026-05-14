@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./colors.css";
+@source "../node_modules/streamdown/dist/*.js";
 
 :root {
   --background: #ffffff;
@@ -6,21 +8,60 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Inter", "Inter Fallback";
+  --font-mono: "JetBrains Mono", "JetBrains Mono Fallback";
+  --font-pirata-one: "Pirata One", "Pirata One Fallback";
+  --font-barcode: var(--font-libre-barcode-128);
+  /* --font-geist: "Geist", "Geist Fallback"; */
+
+  --color-grayscale-1: var(--sand-1);
+  --color-grayscale-2: var(--sand-2);
+  --color-grayscale-3: var(--sand-3);
+  --color-grayscale-4: var(--sand-4);
+  --color-grayscale-5: var(--sand-5);
+  --color-grayscale-6: var(--sand-6);
+  --color-grayscale-7: var(--sand-7);
+  --color-grayscale-8: var(--sand-8);
+  --color-grayscale-9: var(--sand-9);
+  --color-grayscale-10: var(--sand-10);
+  --color-grayscale-11: var(--sand-11);
+  --color-grayscale-12: var(--sand-12);
+
+  --color-accent-1: var(--orange-1);
+  --color-accent-2: var(--orange-2);
+  --color-accent-3: var(--orange-3);
+  --color-accent-4: var(--orange-4);
+  --color-accent-5: var(--orange-5);
+  --color-accent-6: var(--orange-6);
+  --color-accent-7: var(--orange-7);
+  --color-accent-8: var(--orange-8);
+  --color-accent-9: var(--orange-9);
+  --color-accent-10: var(--orange-10);
+  --color-accent-11: var(--orange-11);
+  --color-accent-12: var(--orange-12);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.small-shadow {
+  box-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.02),
+    0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.medium-shadow {
+  box-shadow:
+    0 4px 16px 0 rgba(0, 0, 0, 0.06),
+    0 1.5px 6px 0 rgba(0, 0, 0, 0.04);
 }
