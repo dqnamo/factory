@@ -34,6 +34,10 @@ export const executeFactoryRunTask = task({
 
     let boxId = run.sandboxId;
     const isResume = !!boxId;
+    const boxEnv: Record<string, string> = {};
+    if (factory.githubToken) {
+      boxEnv.GITHUB_TOKEN = factory.githubToken;
+    }
 
     try {
       if (!boxId) {
@@ -41,7 +45,7 @@ export const executeFactoryRunTask = task({
           snapshotId: factory.snapshotId,
           engine,
         });
-        boxId = await restoreBoxFromSnapshot(factory.snapshotId);
+        boxId = await restoreBoxFromSnapshot(factory.snapshotId, { env: boxEnv });
 
         if (factory.githubRepoUrl) {
           if (!factory.githubToken) {
@@ -118,7 +122,7 @@ export const executeFactoryRunTask = task({
 
         await streamCodexExec(
           boxId,
-          { prompt: payload.prompt, resume: isResume, cwd: execCwd },
+          { prompt: payload.prompt, resume: isResume, cwd: execCwd, env: boxEnv },
           onEvent,
         );
       }

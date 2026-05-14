@@ -247,9 +247,12 @@ export async function deleteBox(boxId: string) {
   await box.delete();
 }
 
-export async function restoreBoxFromSnapshot(snapshotId: string) {
+export async function restoreBoxFromSnapshot(
+  snapshotId: string,
+  opts?: { env?: Record<string, string> },
+) {
   const apiKey = getBoxApiKey();
-  const box = await Box.fromSnapshot(snapshotId, { apiKey });
+  const box = await Box.fromSnapshot(snapshotId, { apiKey, env: opts?.env });
   return box.id;
 }
 
@@ -303,7 +306,7 @@ const POLL_INTERVAL_MS = 1_500;
 
 export async function streamCodexExec(
   boxId: string,
-  opts: { prompt: string; resume: boolean; cwd?: string },
+  opts: { prompt: string; resume: boolean; cwd?: string; env?: Record<string, string> },
   onEvent: (event: Record<string, unknown>) => Promise<void>,
 ) {
   const escapedPrompt = shellQuote(opts.prompt);
@@ -312,12 +315,20 @@ export async function streamCodexExec(
     ? `codex exec resume --last ${escapedPrompt} --json --dangerously-bypass-approvals-and-sandbox`
     : `codex exec ${escapedPrompt} --json --dangerously-bypass-approvals-and-sandbox`;
 
+  const envExports = Object.entries(opts.env ?? {})
+    .filter(([, v]) => v)
+    .map(([k, v]) => `export ${k}=${shellQuote(v)}`)
+    .join(" && ");
+
   const launchCommand = [
     `mkdir -p ${factoryDir}`,
     `rm -f ${execOutputPath} ${execExitCodePath} ${execPidPath}`,
     `touch ${execOutputPath}`,
+    envExports ? `${envExports}` : null,
     `{ sh -lc '${codexCommand.replace(/'/g, "'\\''")} >> ${execOutputPath} 2>&1; echo $? > ${execExitCodePath}' & echo $! > ${execPidPath}; }`,
-  ].join(" && ");
+  ]
+    .filter(Boolean)
+    .join(" && ");
 
   await runBoxCommand(boxId, {
     command: launchCommand,
