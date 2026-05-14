@@ -321,17 +321,19 @@ export async function syncGithubRepo(
 ) {
   const repoUrl = normalizeGithubRepoUrl(input.repoUrl);
   const authHeader = getGithubAuthHeader(input.githubToken);
+  const resetGitAuthConfig = shellQuote("http.https://github.com/.extraheader=");
   const gitAuthConfig = shellQuote(`http.https://github.com/.extraheader=${authHeader}`);
+  const gitAuthArgs = `-c ${resetGitAuthConfig} -c ${gitAuthConfig}`;
 
   const command = [
     "command -v git >/dev/null 2>&1 || { apt-get update && apt-get install -y git; }",
     `if test -d ${shellQuote(`${factoryRepoDir}/.git`)}; then ` +
       [
-        `current_remote="$(git -C ${shellQuote(factoryRepoDir)} remote get-url origin 2>/dev/null || true)"; if test "$current_remote" != ${shellQuote(repoUrl)}; then cd ${shellQuote(boxWorkspace)} && rm -rf ${shellQuote(factoryRepoDir)} && git -c ${gitAuthConfig} clone --quiet ${shellQuote(repoUrl)} ${shellQuote(factoryRepoDir)} && git -C ${shellQuote(factoryRepoDir)} remote set-url origin ${shellQuote(repoUrl)}; exit 0; fi`,
-        `git -C ${shellQuote(factoryRepoDir)} -c ${gitAuthConfig} fetch --quiet origin`,
-        `branch="$(git -C ${shellQuote(factoryRepoDir)} symbolic-ref --quiet --short refs/remotes/origin/HEAD | sed 's#^origin/##')"; if test -z "$branch"; then branch="$(git -C ${shellQuote(factoryRepoDir)} rev-parse --abbrev-ref HEAD)"; fi; git -C ${shellQuote(factoryRepoDir)} checkout --quiet "$branch"; git -C ${shellQuote(factoryRepoDir)} -c ${gitAuthConfig} pull --ff-only --quiet origin "$branch"`,
+        `current_remote="$(git -C ${shellQuote(factoryRepoDir)} remote get-url origin 2>/dev/null || true)"; if test "$current_remote" != ${shellQuote(repoUrl)}; then cd ${shellQuote(boxWorkspace)} && rm -rf ${shellQuote(factoryRepoDir)} && git ${gitAuthArgs} clone --quiet ${shellQuote(repoUrl)} ${shellQuote(factoryRepoDir)} && git -C ${shellQuote(factoryRepoDir)} remote set-url origin ${shellQuote(repoUrl)}; exit 0; fi`,
+        `git -C ${shellQuote(factoryRepoDir)} ${gitAuthArgs} fetch --quiet origin`,
+        `branch="$(git -C ${shellQuote(factoryRepoDir)} symbolic-ref --quiet --short refs/remotes/origin/HEAD | sed 's#^origin/##')"; if test -z "$branch"; then branch="$(git -C ${shellQuote(factoryRepoDir)} rev-parse --abbrev-ref HEAD)"; fi; git -C ${shellQuote(factoryRepoDir)} checkout --quiet "$branch"; git -C ${shellQuote(factoryRepoDir)} ${gitAuthArgs} pull --ff-only --quiet origin "$branch"`,
       ].join(" && ") +
-      `; else rm -rf ${shellQuote(factoryRepoDir)} && git -c ${gitAuthConfig} clone --quiet ${shellQuote(repoUrl)} ${shellQuote(factoryRepoDir)} && git -C ${shellQuote(factoryRepoDir)} remote set-url origin ${shellQuote(repoUrl)}; fi`,
+      `; else rm -rf ${shellQuote(factoryRepoDir)} && git ${gitAuthArgs} clone --quiet ${shellQuote(repoUrl)} ${shellQuote(factoryRepoDir)} && git -C ${shellQuote(factoryRepoDir)} remote set-url origin ${shellQuote(repoUrl)}; fi`,
   ].join(" && ");
 
   const result = await runBoxCommand(boxId, {
@@ -389,11 +391,16 @@ export async function streamCodexExec(
     .filter(Boolean)
     .join(" && ");
 
-  await runBoxCommand(boxId, {
+  const launchResult = await runBoxCommand(boxId, {
     command: launchCommand,
     cwd: opts.cwd ?? boxWorkspace,
     timeout_ms: 15_000,
   });
+  if (!launchResult.success) {
+    throw new Error(
+      `Could not start Codex exec: ${cleanOutput(getOutput(launchResult)) || "No output from launch command."}`,
+    );
+  }
 
   let linesRead = 0;
 

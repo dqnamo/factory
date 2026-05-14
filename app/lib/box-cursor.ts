@@ -80,11 +80,16 @@ export async function streamCursorExec(
     `{ sh -lc '${cursorCommand.replace(/'/g, "'\\''")} >> ${execOutputPath} 2>&1; echo $? > ${execExitCodePath}' & echo $! > ${execPidPath}; }`,
   ].join(" && ");
 
-  await runBoxCommand(boxId, {
+  const launchResult = await runBoxCommand(boxId, {
     command: launchCommand,
     cwd: opts.cwd ?? boxWorkspace,
     timeout_ms: 15_000,
   });
+  if (!launchResult.success) {
+    throw new Error(
+      `Could not start Cursor exec: ${cleanOutput(getOutput(launchResult)) || "No output from launch command."}`,
+    );
+  }
 
   let linesRead = 0;
 
