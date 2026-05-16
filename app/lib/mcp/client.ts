@@ -68,27 +68,18 @@ export async function syncMcpConnection({
     await clientContext?.client.close().catch(() => null);
 
     if (error instanceof UnauthorizedError) {
-      const capabilities = await listMcpCapabilitiesForConnection(
-        connection.id,
-      );
+      const capabilities = await listMcpCapabilitiesForConnection(connection.id);
       const authType = getMcpAuthType(connection);
       const authUrl =
-        authType === "oauth"
-          ? await getStoredAuthorizationUrl(connection.id)
-          : undefined;
+        authType === "oauth" ? await getStoredAuthorizationUrl(connection.id) : undefined;
       const lastError =
-        authType === "bearer_token"
-          ? "Bearer token was rejected or expired."
-          : null;
+        authType === "bearer_token" ? "Bearer token was rejected or expired." : null;
 
       await updateMcpConnection(connection.id, {
         authStatus: "authorization_required",
         lastError,
         loginUrl: authUrl,
-        status:
-          capabilities.length > 0 && authType === "oauth"
-            ? "authenticated"
-            : "failed",
+        status: capabilities.length > 0 && authType === "oauth" ? "authenticated" : "failed",
         syncStatus: authType === "oauth" ? "pending" : "failed",
       });
 
@@ -99,10 +90,7 @@ export async function syncMcpConnection({
           authStatus: "authorization_required",
           lastError,
           loginUrl: authUrl,
-          status:
-            capabilities.length > 0 && authType === "oauth"
-              ? "authenticated"
-              : "failed",
+          status: capabilities.length > 0 && authType === "oauth" ? "authenticated" : "failed",
           syncStatus: authType === "oauth" ? "pending" : "failed",
         },
         status: "authorization_required",
@@ -188,14 +176,8 @@ async function requireMcpConnection({
   return connection;
 }
 
-async function createMcpClient(
-  connection: McpConnectionRecord,
-  callbackUrl: string,
-) {
-  const client = new Client(
-    { name: "factory", version: "0.1.0" },
-    { capabilities: {} },
-  );
+async function createMcpClient(connection: McpConnectionRecord, callbackUrl: string) {
+  const client = new Client({ name: "factory", version: "0.1.0" }, { capabilities: {} });
 
   if (getMcpAuthType(connection) === "bearer_token") {
     const bearerToken = await getMcpBearerToken(connection.id);
@@ -204,26 +186,19 @@ async function createMcpClient(
       throw new Error("Bearer token is missing for this MCP connection.");
     }
 
-    const transport = new StreamableHTTPClientTransport(
-      new URL(connection.url),
-      {
-        requestInit: {
-          headers: { Authorization: `Bearer ${bearerToken}` },
-        },
+    const transport = new StreamableHTTPClientTransport(new URL(connection.url), {
+      requestInit: {
+        headers: { Authorization: `Bearer ${bearerToken}` },
       },
-    );
+    });
 
     return { client, transport };
   }
 
-  const provider = new PersistentFactoryMcpOAuthProvider(
-    connection,
-    callbackUrl,
-  );
-  const transport = new StreamableHTTPClientTransport(
-    new URL(connection.url),
-    { authProvider: provider },
-  );
+  const provider = new PersistentFactoryMcpOAuthProvider(connection, callbackUrl);
+  const transport = new StreamableHTTPClientTransport(new URL(connection.url), {
+    authProvider: provider,
+  });
 
   return { client, transport };
 }
@@ -235,9 +210,7 @@ function getMcpAuthType(connection: McpConnectionRecord) {
 async function listRemoteCapabilities(client: Client) {
   const tools = await client.listTools().catch(() => ({ tools: [] }));
   const prompts = await client.listPrompts().catch(() => ({ prompts: [] }));
-  const resources = await client
-    .listResources()
-    .catch(() => ({ resources: [] }));
+  const resources = await client.listResources().catch(() => ({ resources: [] }));
 
   return [
     ...tools.tools.map((tool) => ({

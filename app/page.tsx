@@ -8,16 +8,16 @@ import {
   PlugsConnectedIcon,
   RocketLaunchIcon,
 } from "@phosphor-icons/react/dist/ssr";
-import Button from "./components/Button";
-import Input from "./components/Input";
-import ModalDrawer from "./components/ModalDrawer";
-import UIPreview from "./components/UIPreview";
 import Image from "next/image";
-import Logo from "./components/Logo";
 import Link from "next/link";
-import { db } from "./lib/instant";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Button from "./components/Button";
+import Input from "./components/Input";
+import Logo from "./components/Logo";
+import ModalDrawer from "./components/ModalDrawer";
+import UIPreview from "./components/UIPreview";
+import { db } from "./lib/instant";
 
 export default function Home() {
   const { isLoading, user } = db.useAuth();
@@ -31,13 +31,12 @@ export default function Home() {
             factory: {},
           },
         }
-      : null
+      : null,
   );
 
   const factoryList = factories?.factoryUsers
-    .map((fu) => fu.factory)
-    .flat()
-    .filter(Boolean);
+    .flatMap((fu) => fu.factory)
+    .filter((factory) => factory != null);
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -50,8 +49,10 @@ export default function Home() {
     if (isLoading || !user) return;
     if (isLoadingFactories) return;
 
-    if (factoryList && factoryList.length > 0) {
-      router.replace(`/factories/${factoryList[0].id}`);
+    const firstFactory = factoryList?.[0];
+
+    if (firstFactory) {
+      router.replace(`/factories/${firstFactory.id}`);
     } else {
       router.replace("/factories/new");
     }

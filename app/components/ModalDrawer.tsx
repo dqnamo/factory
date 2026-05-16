@@ -35,25 +35,21 @@ type ModalDrawerProps = {
 };
 
 function useMediaQuery(query: string, defaultMatches = true) {
-  const [matches, setMatches] = React.useState(defaultMatches);
+  return React.useSyncExternalStore(
+    React.useCallback(
+      (onStoreChange) => {
+        const mediaQuery = window.matchMedia(query);
+        mediaQuery.addEventListener("change", onStoreChange);
 
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia(query);
-
-    setMatches(mediaQuery.matches);
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      setMatches(event.matches);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, [query]);
-
-  return matches;
+        return () => {
+          mediaQuery.removeEventListener("change", onStoreChange);
+        };
+      },
+      [query],
+    ),
+    () => window.matchMedia(query).matches,
+    () => defaultMatches,
+  );
 }
 
 export default function ModalDrawer({

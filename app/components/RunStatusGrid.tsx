@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+const GRID_CELLS = Array.from({ length: 9 }, (_, index) => index);
 const TRAIL_OPACITIES = [1, 0.55, 0.25, 0.1];
 
 function getTrailOpacity(cellIndex: number, head: number) {
@@ -35,8 +36,8 @@ export default function RunStatusGrid({ status }: { status: string }) {
 
     return (
       <div className="grid grid-cols-3 gap-px shrink-0">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className={`w-[2px] h-[2px] ${color}`} />
+        {GRID_CELLS.map((cell) => (
+          <div key={cell} className={`w-[2px] h-[2px] ${color}`} />
         ))}
       </div>
     );
@@ -44,10 +45,10 @@ export default function RunStatusGrid({ status }: { status: string }) {
 
   return (
     <div className="grid grid-cols-3 gap-px shrink-0">
-      {Array.from({ length: 9 }).map((_, i) => {
-        const trailOpacity = getTrailOpacity(i, head);
+      {GRID_CELLS.map((cell) => {
+        const trailOpacity = getTrailOpacity(cell, head);
         return (
-          <div key={i} className="w-[2px] h-[2px] relative">
+          <div key={cell} className="w-[2px] h-[2px] relative">
             <div className="absolute inset-0 bg-blue-5" />
             <div
               className="absolute inset-0 bg-blue-9 transition-opacity duration-150 ease-linear"

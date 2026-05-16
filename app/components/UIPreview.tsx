@@ -9,18 +9,20 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 const SECTION_ICONS = [
-  { Icon: FactoryIcon, active: true },
-  { Icon: PlugsConnectedIcon, active: false },
-  { Icon: NoteIcon, active: false },
-  { Icon: GithubLogoIcon, active: false },
-  { Icon: FadersHorizontalIcon, active: false },
+  { id: "factory", Icon: FactoryIcon, active: true },
+  { id: "mcp", Icon: PlugsConnectedIcon, active: false },
+  { id: "notes", Icon: NoteIcon, active: false },
+  { id: "github", Icon: GithubLogoIcon, active: false },
+  { id: "settings", Icon: FadersHorizontalIcon, active: false },
 ];
+
+const GRID_CELLS = Array.from({ length: 9 }, (_, index) => index);
 
 function StatusDots({ color }: { color: string }) {
   return (
     <div className="grid grid-cols-3 gap-px shrink-0">
-      {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className={`w-[2px] h-[2px] rounded-none ${color}`} />
+      {GRID_CELLS.map((cell) => (
+        <div key={cell} className={`w-[2px] h-[2px] rounded-none ${color}`} />
       ))}
     </div>
   );
@@ -47,9 +49,9 @@ export default function UIPreview() {
 
       {/* Section rail */}
       <div className="flex flex-col p-1.5 gap-1.5 border-r border-grayscale-3">
-        {SECTION_ICONS.map(({ Icon, active }, i) => (
+        {SECTION_ICONS.map(({ id, Icon, active }) => (
           <div
-            key={i}
+            key={id}
             className={`size-6 rounded flex items-center justify-center ${
               active ? "bg-grayscale-3" : "bg-grayscale-1"
             }`}
@@ -129,9 +131,7 @@ export default function UIPreview() {
             {/* System event */}
             <div className="flex items-center gap-1 px-1.5 py-0.5">
               <div className="size-1 rounded-full bg-grayscale-8" />
-              <p className="text-[7px] font-mono text-grayscale-9">
-                Cursor Agent · claude-4-opus
-              </p>
+              <p className="text-[7px] font-mono text-grayscale-9">Cursor Agent · claude-4-opus</p>
             </div>
 
             {/* Tool calls */}
@@ -146,9 +146,7 @@ export default function UIPreview() {
 
             {/* Agent message */}
             <div className="flex flex-col gap-0.5 self-start max-w-[85%]">
-              <p className="text-[7px] font-mono font-semibold text-grayscale-9 uppercase">
-                Agent
-              </p>
+              <p className="text-[7px] font-mono font-semibold text-grayscale-9 uppercase">Agent</p>
               <p className="text-[9px] text-grayscale-12 leading-relaxed">
                 I&apos;ve redesigned the auth page with a magic code login flow. The new design
                 includes an email input, code verification step, and modern minimal styling.

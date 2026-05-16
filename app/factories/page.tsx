@@ -1,8 +1,8 @@
 "use client";
 
-import { db } from "../lib/instant";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { db } from "../lib/instant";
 
 export default function FactoriesPage() {
   const { isLoading, user } = db.useAuth();
@@ -20,9 +20,8 @@ export default function FactoriesPage() {
   });
 
   const factoryList = factories?.factoryUsers
-    .map((factoryUser) => factoryUser.factory)
-    .flat()
-    .filter(Boolean);
+    .flatMap((factoryUser) => factoryUser.factory)
+    .filter((factory) => factory != null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -33,8 +32,10 @@ export default function FactoriesPage() {
   useEffect(() => {
     if (isLoadingFactories) return;
 
-    if (factoryList && factoryList.length > 0) {
-      router.replace(`/factories/${factoryList[0].id}`);
+    const firstFactory = factoryList?.[0];
+
+    if (firstFactory) {
+      router.replace(`/factories/${firstFactory.id}`);
     } else if (factoryList) {
       router.replace("/factories/new");
     }

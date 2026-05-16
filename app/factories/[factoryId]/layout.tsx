@@ -1,28 +1,28 @@
 "use client";
 
 import {
-  CircleNotchIcon,
-  FadersHorizontalIcon,
-  ListIcon,
-  PlusIcon,
-  XIcon,
-} from "@phosphor-icons/react/dist/ssr";
-import Link from "next/link";
-import { useParams, usePathname, useRouter } from "next/navigation";
-import { db } from "../../lib/instant";
-import { cn } from "../../helpers/ui-helper";
-import Button from "@/app/components/Button";
-import RunStatusGrid from "@/app/components/RunStatusGrid";
-import ContextMenu, { type ContextMenuItem } from "@/app/components/ContextMenu";
-import { DateTime } from "luxon";
-import {
   DetectiveIcon,
   FactoryIcon,
   GithubLogoIcon,
   NoteIcon,
   PlugsConnectedIcon,
 } from "@phosphor-icons/react";
+import {
+  CircleNotchIcon,
+  FadersHorizontalIcon,
+  ListIcon,
+  PlusIcon,
+  XIcon,
+} from "@phosphor-icons/react/dist/ssr";
+import { DateTime } from "luxon";
+import Link from "next/link";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import Button from "@/app/components/Button";
+import ContextMenu, { type ContextMenuItem } from "@/app/components/ContextMenu";
+import RunStatusGrid from "@/app/components/RunStatusGrid";
+import { cn } from "../../helpers/ui-helper";
+import { db } from "../../lib/instant";
 
 const COLORS = [
   "bg-blue-9",
@@ -38,6 +38,17 @@ const COLORS = [
 const ACTIVE_STATUSES = ["provisioning", "running", "idle"];
 const CLOSED_STATUSES = ["completed", "failed"];
 
+type RunSummary = {
+  id: string;
+  name?: string;
+  status?: string;
+  createdAt?: number | string;
+};
+
+function isPresent<T>(value: T | null | undefined): value is T {
+  return value != null;
+}
+
 function getInitials(name: string) {
   return name
     .split(/\s+/)
@@ -47,8 +58,10 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function formatTime(ts: number) {
-  return DateTime.fromMillis(ts).toRelative() ?? "";
+function formatTime(ts: number | string) {
+  const dateTime = typeof ts === "number" ? DateTime.fromMillis(ts) : DateTime.fromISO(ts);
+
+  return dateTime.isValid ? (dateTime.toRelative() ?? "") : "";
 }
 
 export default function FactoryLayout({ children }: { children: React.ReactNode }) {
@@ -81,11 +94,7 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
       : null,
   );
 
-  const factoryList =
-    factories?.factoryUsers
-      .map((fu) => fu.factory)
-      .flat()
-      .filter(Boolean) ?? [];
+  const factoryList = factories?.factoryUsers.flatMap((fu) => fu.factory).filter(isPresent) ?? [];
 
   const currentFactory = factoryData?.factories[0];
   const allRuns = currentFactory?.runs ?? [];
@@ -247,6 +256,7 @@ function useRunContextMenu(
   return [
     {
       type: "item",
+      id: "toggle-complete",
       label: isClosed ? "Mark as incomplete" : "Mark as complete",
       onClick: () => {
         db.transact(
@@ -256,9 +266,10 @@ function useRunContextMenu(
         );
       },
     },
-    { type: "separator" },
+    { type: "separator", id: "run-actions-separator" },
     {
       type: "item",
+      id: "delete-run",
       label: "Delete run",
       variant: "danger",
       onClick: () => {
@@ -275,7 +286,7 @@ function RunItem({
   isActive,
   onNavigate,
 }: {
-  run: { id: string; name?: string; status?: string; createdAt?: number };
+  run: RunSummary;
   factoryId: string;
   isActive: boolean;
   onNavigate?: () => void;
@@ -301,9 +312,7 @@ function RunItem({
           </p>
           <RunStatusGrid status={run.status ?? ""} />
         </div>
-        {run.createdAt && (
-          <p className="text-xs text-grayscale-10">{formatTime(run.createdAt)}</p>
-        )}
+        {run.createdAt && <p className="text-xs text-grayscale-10">{formatTime(run.createdAt)}</p>}
       </Link>
     </ContextMenu>
   );
@@ -320,8 +329,8 @@ function RunListContent({
   factoryId: string;
   runId?: string;
   isSettingUp: boolean | undefined;
-  activeRuns: Array<{ id: string; name?: string; status?: string; createdAt?: number }>;
-  closedRuns: Array<{ id: string; name?: string; status?: string; createdAt?: number }>;
+  activeRuns: RunSummary[];
+  closedRuns: RunSummary[];
   onNavigate?: () => void;
 }) {
   if (isSettingUp) {
@@ -439,7 +448,11 @@ function SectionRail({
   factoryId,
   pathname,
   className,
-}: { factoryId: string; pathname: string; className?: string }) {
+}: {
+  factoryId: string;
+  pathname: string;
+  className?: string;
+}) {
   return (
     <nav
       className={cn("flex flex-col w-max p-2 gap-2 border-r border-grayscale-3", className)}

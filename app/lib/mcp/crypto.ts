@@ -1,11 +1,6 @@
 import "server-only";
 
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 const algorithm = "aes-256-gcm";
 
@@ -17,9 +12,7 @@ export function encryptMcpValue(value: unknown) {
   const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const tag = cipher.getAuthTag();
 
-  return [iv, tag, ciphertext]
-    .map((part) => part.toString("base64url"))
-    .join(".");
+  return [iv, tag, ciphertext].map((part) => part.toString("base64url")).join(".");
 }
 
 export function decryptMcpValue<T>(value?: null | string) {
@@ -34,11 +27,7 @@ export function decryptMcpValue<T>(value?: null | string) {
   }
 
   const key = getEncryptionKey();
-  const decipher = createDecipheriv(
-    algorithm,
-    key,
-    Buffer.from(ivValue, "base64url"),
-  );
+  const decipher = createDecipheriv(algorithm, key, Buffer.from(ivValue, "base64url"));
 
   decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
 

@@ -1,8 +1,5 @@
 import { finishMcpOAuth } from "@/app/lib/mcp/client";
-import {
-  getMcpConnectionById,
-  getMcpOauthStateByState,
-} from "@/app/lib/mcp/records";
+import { getMcpConnectionById, getMcpOauthStateByState } from "@/app/lib/mcp/records";
 
 export const runtime = "nodejs";
 
@@ -33,9 +30,7 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   try {
-    const origin =
-      process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ??
-      new URL(request.url).origin;
+    const origin = process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ?? new URL(request.url).origin;
     const callbackUrl = `${origin}/api/factories/${factoryId}/mcp/oauth/callback`;
 
     await finishMcpOAuth({
@@ -47,10 +42,7 @@ export async function GET(request: Request, context: RouteContext) {
   } catch (error) {
     console.error(error);
 
-    return new Response(
-      "MCP OAuth failed. Return to the factory and try again.",
-      { status: 500 },
-    );
+    return new Response("MCP OAuth failed. Return to the factory and try again.", { status: 500 });
   }
 
   return new Response(

@@ -1,5 +1,5 @@
-import { cn } from "../helpers/ui-helper";
 import Link from "next/link";
+import { cn } from "../helpers/ui-helper";
 
 export default function Button({
   variant = "primary",

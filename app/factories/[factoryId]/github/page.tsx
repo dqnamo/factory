@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import { authFetch } from "@/app/lib/auth-fetch";
@@ -9,10 +9,10 @@ import { db } from "@/app/lib/instant";
 
 export default function GithubPage() {
   const params = useParams<{ factoryId: string }>();
-  const [repoUrl, setRepoUrl] = useState("");
+  const [repoUrl, setRepoUrl] = useState<string | null>(null);
   const [token, setToken] = useState("");
-  const [gitName, setGitName] = useState("");
-  const [gitEmail, setGitEmail] = useState("");
+  const [gitName, setGitName] = useState<string | null>(null);
+  const [gitEmail, setGitEmail] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,26 +29,15 @@ export default function GithubPage() {
 
   const factory = data?.factories[0];
   const hasSavedToken = Boolean(factory?.githubTokenSet);
-
-  useEffect(() => {
-    if (factory?.githubRepoUrl) {
-      setRepoUrl(factory.githubRepoUrl);
-    }
-  }, [factory?.githubRepoUrl]);
-
-  useEffect(() => {
-    setGitName(factory?.gitName ?? "");
-  }, [factory?.gitName]);
-
-  useEffect(() => {
-    setGitEmail(factory?.gitEmail ?? "");
-  }, [factory?.gitEmail]);
+  const displayedRepoUrl = repoUrl ?? factory?.githubRepoUrl ?? "";
+  const displayedGitName = gitName ?? factory?.gitName ?? "";
+  const displayedGitEmail = gitEmail ?? factory?.gitEmail ?? "";
 
   const handleSave = useCallback(async () => {
-    const trimmedRepoUrl = repoUrl.trim();
+    const trimmedRepoUrl = displayedRepoUrl.trim();
     const trimmedToken = token.trim();
-    const trimmedGitName = gitName.trim();
-    const trimmedGitEmail = gitEmail.trim();
+    const trimmedGitName = displayedGitName.trim();
+    const trimmedGitEmail = displayedGitEmail.trim();
 
     if (!trimmedRepoUrl) {
       setError("Enter a repository URL.");
@@ -92,13 +81,23 @@ export default function GithubPage() {
       }
 
       setToken("");
+      setRepoUrl(trimmedRepoUrl);
+      setGitName(trimmedGitName);
+      setGitEmail(trimmedGitEmail);
       setSaved(true);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save GitHub settings.");
     } finally {
       setSaving(false);
     }
-  }, [repoUrl, token, gitName, gitEmail, hasSavedToken, params.factoryId]);
+  }, [
+    displayedRepoUrl,
+    token,
+    displayedGitName,
+    displayedGitEmail,
+    hasSavedToken,
+    params.factoryId,
+  ]);
 
   return (
     <div className="max-w-2xl mx-auto w-full px-4 py-5 sm:px-0 sm:py-8 flex flex-col gap-4 overflow-y-auto flex-1">
@@ -125,7 +124,7 @@ export default function GithubPage() {
             inputMode="url"
             name="github-repository-url"
             placeholder="https://github.com/factory-ai/factory"
-            value={repoUrl}
+            value={displayedRepoUrl}
             onChange={(event) => {
               setRepoUrl(event.target.value);
               setSaved(false);
@@ -171,7 +170,7 @@ export default function GithubPage() {
             disabled={isLoading || saving}
             name="git-name"
             placeholder="Commit author name"
-            value={gitName}
+            value={displayedGitName}
             onChange={(event) => {
               setGitName(event.target.value);
               setSaved(false);
@@ -184,7 +183,7 @@ export default function GithubPage() {
             name="git-email"
             placeholder="author@example.com"
             type="email"
-            value={gitEmail}
+            value={displayedGitEmail}
             onChange={(event) => {
               setGitEmail(event.target.value);
               setSaved(false);
@@ -204,7 +203,9 @@ export default function GithubPage() {
             </div>
             <Button
               variant="primary"
-              disabled={isLoading || saving || !repoUrl.trim() || (!hasSavedToken && !token.trim())}
+              disabled={
+                isLoading || saving || !displayedRepoUrl.trim() || (!hasSavedToken && !token.trim())
+              }
               onClick={handleSave}
             >
               <p>{saving ? "Saving..." : "Save"}</p>

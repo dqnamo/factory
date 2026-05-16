@@ -2,7 +2,7 @@
 
 import { ArrowsClockwiseIcon, TrashIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { useParams } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Switch from "@/app/components/Switch";
@@ -35,6 +35,14 @@ type McpServer = {
   syncStatus?: string;
   url: string;
 };
+
+function removeOptimisticValue<T>(values: Record<string, T>, id: string) {
+  if (!(id in values)) return values;
+
+  const next = { ...values };
+  delete next[id];
+  return next;
+}
 
 export default function FactoryMcpPage() {
   const { factoryId } = useParams<{ factoryId: string }>();
@@ -80,38 +88,6 @@ export default function FactoryMcpPage() {
         .sort((a, b) => a.name.localeCompare(b.name)),
     [factory?.mcpServers],
   );
-
-  useEffect(() => {
-    setOptimisticServerEnabledById((current) => {
-      let changed = false;
-      const next = { ...current };
-
-      for (const server of mcpServers) {
-        if (next[server.id] === (server.enabled !== false)) {
-          delete next[server.id];
-          changed = true;
-        }
-      }
-
-      return changed ? next : current;
-    });
-
-    setOptimisticToolEnabledById((current) => {
-      let changed = false;
-      const next = { ...current };
-
-      for (const server of mcpServers) {
-        for (const tool of server.capabilities ?? []) {
-          if (next[tool.id] === tool.enabled) {
-            delete next[tool.id];
-            changed = true;
-          }
-        }
-      }
-
-      return changed ? next : current;
-    });
-  }, [mcpServers]);
 
   async function handleAddMcp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -197,8 +173,6 @@ export default function FactoryMcpPage() {
   }
 
   async function handleToggleMcp(server: McpServer, enabled: boolean) {
-    const previousEnabled = optimisticServerEnabledById[server.id] ?? server.enabled !== false;
-
     setOptimisticServerEnabledById((current) => ({
       ...current,
       [server.id]: enabled,
@@ -209,12 +183,10 @@ export default function FactoryMcpPage() {
 
     try {
       await db.transact(db.tx.factoryMcpServers[server.id].update({ enabled }));
+      setOptimisticServerEnabledById((current) => removeOptimisticValue(current, server.id));
     } catch (error) {
       console.error(error);
-      setOptimisticServerEnabledById((current) => ({
-        ...current,
-        [server.id]: previousEnabled,
-      }));
+      setOptimisticServerEnabledById((current) => removeOptimisticValue(current, server.id));
       setMcpError(error instanceof Error ? error.message : "MCP update failed.");
     } finally {
       setActionId(null);
@@ -237,8 +209,6 @@ export default function FactoryMcpPage() {
   }
 
   async function handleToggleMcpCapability(capability: McpCapability, enabled: boolean) {
-    const previousEnabled = optimisticToolEnabledById[capability.id] ?? capability.enabled;
-
     setOptimisticToolEnabledById((current) => ({
       ...current,
       [capability.id]: enabled,
@@ -249,12 +219,10 @@ export default function FactoryMcpPage() {
 
     try {
       await db.transact(db.tx.factoryMcpCapabilities[capability.id].update({ enabled }));
+      setOptimisticToolEnabledById((current) => removeOptimisticValue(current, capability.id));
     } catch (error) {
       console.error(error);
-      setOptimisticToolEnabledById((current) => ({
-        ...current,
-        [capability.id]: previousEnabled,
-      }));
+      setOptimisticToolEnabledById((current) => removeOptimisticValue(current, capability.id));
       setMcpError(error instanceof Error ? error.message : "Tool update failed.");
     } finally {
       setActionId(null);

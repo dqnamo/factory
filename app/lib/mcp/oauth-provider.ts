@@ -44,9 +44,7 @@ export class PersistentFactoryMcpOAuthProvider implements OAuthClientProvider {
 
   async clientInformation() {
     const state = await this.loadState();
-    return decryptMcpValue<OAuthClientInformationMixed>(
-      state?.encryptedClientInformation,
-    );
+    return decryptMcpValue<OAuthClientInformationMixed>(state?.encryptedClientInformation);
   }
 
   async saveClientInformation(clientInformation: OAuthClientInformationMixed) {
@@ -100,9 +98,7 @@ export class PersistentFactoryMcpOAuthProvider implements OAuthClientProvider {
     return state?.discoveryState as OAuthDiscoveryState | undefined;
   }
 
-  async invalidateCredentials(
-    scope: "all" | "client" | "discovery" | "tokens" | "verifier",
-  ) {
+  async invalidateCredentials(scope: "all" | "client" | "discovery" | "tokens" | "verifier") {
     const values: Record<string, null | undefined> = {};
 
     if (scope === "all" || scope === "client") {

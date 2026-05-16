@@ -4,8 +4,15 @@ import { ContextMenu as BaseContextMenu } from "@base-ui/react/context-menu";
 import { cn } from "../helpers/ui-helper";
 
 export type ContextMenuItem =
-  | { type: "item"; label: string; onClick: () => void; variant?: "danger"; disabled?: boolean }
-  | { type: "separator" };
+  | {
+      type: "item";
+      id: string;
+      label: string;
+      onClick: () => void;
+      variant?: "danger";
+      disabled?: boolean;
+    }
+  | { type: "separator"; id: string };
 
 interface ContextMenuProps {
   items: ContextMenuItem[];
@@ -22,15 +29,15 @@ export default function ContextMenu({ items, children, className }: ContextMenuP
       <BaseContextMenu.Portal>
         <BaseContextMenu.Positioner className="outline-hidden z-50">
           <BaseContextMenu.Popup className="origin-[var(--transform-origin)] rounded-lg border border-grayscale-4 bg-grayscale-1 py-1 shadow-lg transition-[opacity] data-[ending-style]:opacity-0">
-            {items.map((item, i) =>
+            {items.map((item) =>
               item.type === "separator" ? (
                 <BaseContextMenu.Separator
-                  key={`sep-${i}`}
+                  key={item.id}
                   className="mx-2 my-1 h-px bg-grayscale-4"
                 />
               ) : (
                 <BaseContextMenu.Item
-                  key={`item-${i}`}
+                  key={item.id}
                   disabled={item.disabled}
                   onClick={item.onClick}
                   className={cn(

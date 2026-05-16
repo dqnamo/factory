@@ -2,7 +2,7 @@
 
 import { TrashIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { useParams } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import Button from "@/app/components/Button";
 import Input from "@/app/components/Input";
 import Switch from "@/app/components/Switch";
@@ -18,6 +18,14 @@ type SkillItem = {
   skillPath?: string | null;
   status: string;
 };
+
+function removeOptimisticValue(values: Record<string, boolean>, id: string) {
+  if (!(id in values)) return values;
+
+  const next = { ...values };
+  delete next[id];
+  return next;
+}
 
 export default function FactorySkillsPage() {
   const { factoryId } = useParams<{ factoryId: string }>();
@@ -45,22 +53,6 @@ export default function FactorySkillsPage() {
       ),
     [factory?.skills],
   );
-
-  useEffect(() => {
-    setOptimisticEnabledById((current) => {
-      let changed = false;
-      const next = { ...current };
-
-      for (const skill of skills) {
-        if (next[skill.id] === (skill.status === "installed")) {
-          delete next[skill.id];
-          changed = true;
-        }
-      }
-
-      return changed ? next : current;
-    });
-  }, [skills]);
 
   async function handleInstallSkills(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -102,10 +94,6 @@ export default function FactorySkillsPage() {
   }
 
   async function handleToggleSkill(skillId: string, enabled: boolean) {
-    const previousEnabled =
-      optimisticEnabledById[skillId] ??
-      skills.find((skill) => skill.id === skillId)?.status === "installed";
-
     setOptimisticEnabledById((current) => ({ ...current, [skillId]: enabled }));
     setActionSkillId(skillId);
     setSkillError(null);
@@ -122,9 +110,11 @@ export default function FactorySkillsPage() {
       if (!response.ok) {
         throw new Error(body?.error ?? "Skill could not be updated.");
       }
+
+      setOptimisticEnabledById((current) => removeOptimisticValue(current, skillId));
     } catch (error) {
       console.error(error);
-      setOptimisticEnabledById((current) => ({ ...current, [skillId]: previousEnabled }));
+      setOptimisticEnabledById((current) => removeOptimisticValue(current, skillId));
       setSkillError(error instanceof Error ? error.message : "Skill could not be updated.");
     } finally {
       setActionSkillId(null);

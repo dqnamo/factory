@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Inter, JetBrains_Mono, Pirata_One, Libre_Barcode_128 } from "next/font/google";
+import { Geist, Inter, JetBrains_Mono, Libre_Barcode_128, Pirata_One } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegistrar from "./components/ServiceWorkerRegistrar";
 

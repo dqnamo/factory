@@ -15,6 +15,14 @@ type QueuedMessage = {
   text: string;
 };
 
+function toTimestamp(value: number | string | undefined) {
+  if (typeof value === "number") return value;
+  if (!value) return 0;
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 export default function RunPage() {
   const params = useParams<{ factoryId: string; runId: string }>();
   const [followUp, setFollowUp] = useState("");
@@ -31,7 +39,7 @@ export default function RunPage() {
 
   const run = data?.runs[0];
   const events = run?.events
-    ? [...run.events].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
+    ? [...run.events].sort((a, b) => toTimestamp(a.createdAt) - toTimestamp(b.createdAt))
     : [];
 
   const eventCount = events.length;

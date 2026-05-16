@@ -84,16 +84,14 @@ export default function FactorySettingsPage() {
             <div className="flex flex-col p-3">
               <h2 className="font-medium text-sm text-grayscale-12">Delete factory</h2>
               <p className="text-xs text-grayscale-11 mt-1">
-                Permanently delete <span className="font-medium text-grayscale-12">{factory?.name}</span> and
-                all of its runs, skills, and MCP servers. This action cannot be undone.
+                Permanently delete{" "}
+                <span className="font-medium text-grayscale-12">{factory?.name}</span> and all of
+                its runs, skills, and MCP servers. This action cannot be undone.
               </p>
             </div>
 
             <div className="border-t border-grayscale-3 p-3">
-              <label
-                htmlFor="confirm-name"
-                className="text-xs text-grayscale-11 block mb-1.5"
-              >
+              <label htmlFor="confirm-name" className="text-xs text-grayscale-11 block mb-1.5">
                 Type <span className="font-medium text-grayscale-12">{factory?.name}</span> to
                 confirm
               </label>
